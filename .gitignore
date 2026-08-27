@@ -6,3 +6,4 @@ out/
 build/
 .DS_Store
 Thumbs.db
+*.zip

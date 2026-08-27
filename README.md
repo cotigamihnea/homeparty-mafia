@@ -49,9 +49,9 @@ If you just want to play the game without messing with code, use this method.
 If you want to modify the code, tweak the UI, or build your own version, follow these steps. You will need Node.js installed on your computer.
 
 1. **Clone this repository:**
-   `git clone https://github.com/YOUR_USERNAME/mafia-party-game.git`
+   `git clone https://github.com/cotigamihnea/homeparty-mafia`
 2. **Navigate into the project folder:**
-   `cd mafia-party-game`
+   `cd folder-name`
 3. **Install the dependencies:**
    `npm install`
 4. **Start the game in development mode:**
