@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mafia Game Client</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- SCREEN 1: Join Screen -->
+        <div id="join-screen" class="card active">
+            <h1 class="game-title">🕵️ MAFIA</h1>
+            <p class="subtitle">Enter your name to join the game</p>
+            
+            <form id="join-form">
+                <input type="text" id="username-input" placeholder="Enter your name..." maxlength="16" required autocomplete="off" autofocus />
+                <p id="join-error" style="color: #fc8181; font-size: 0.9rem; margin-top: 8px; display: none;"></p>
+                <button type="submit" id="join-btn" style="margin-top: 16px;">Join Lobby</button>
+            </form>
+        </div>
+
+        <!-- SCREEN 2: In-Game / Lobby Screen -->
+        <div id="game-screen" class="card">
+            <h2 id="welcome-msg">Welcome, Player!</h2>
+            
+            <div id="role-container" class="role-badge">
+                <span class="role-label">Your Role</span>
+                <h3 id="role-name">Waiting...</h3>
+            </div>
+
+            <!-- STORYTELLER CONTROLS -->
+            <div id="storyteller-controls" style="display: none; margin-top: 20px;">
+                <button id="btn-start-game" disabled>Start Game (Need 6+ Players)</button>
+                
+                <button id="btn-show-transfer" style="margin-top: 10px; background-color: #4a5568;">Promote another Storyteller</button>
+                
+                <div id="st-transfer-controls" style="display: none; margin-top: 15px;">
+                    <p style="margin-bottom: 10px;">Select new Storyteller:</p>
+                    <div id="transfer-buttons-container" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                    <button id="btn-cancel-transfer" style="margin-top: 10px; background-color: #a0aec0; color: #1a1d29;">Cancel</button>
+                </div>
+                
+                <!-- NOTES SECTION -->
+                <div id="st-notes-container" style="display: none; margin-top: 20px; text-align: left;">
+                    <label style="color: #a0aec0; font-size: 0.8rem; text-transform: uppercase;">Private Notes</label>
+                    <textarea id="st-notes" rows="4" placeholder="Note down who is who..." style="width: 100%; margin-top: 5px; padding: 10px; border-radius: 8px; background: #0b0d14; color: #fff; border: 1px solid #4a5568; resize: vertical;"></textarea>
+                </div>
+
+                <div id="st-night-controls" style="display: none; margin-top: 15px;">
+                    <p>It's Nighttime.</p>
+                    <button id="btn-start-day" style="margin-top: 10px;">Start the Daytime</button>
+                </div>
+
+                <div id="st-death-controls" style="display: none; margin-top: 15px;">
+                    <p style="margin-bottom: 10px;">Who died tonight?</p>
+                    <div id="death-buttons-container" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                </div>
+
+                <div id="st-talk-controls" style="display: none; margin-top: 15px;">
+                    <p style="margin-bottom: 10px;">Talking phase... <span id="time-left">90</span>s</p>
+                    <button id="btn-skip-talk">Skip Talking Stage</button>
+                </div>
+
+                <div id="st-end-controls" style="display: none; margin-top: 15px;">
+                    <p style="margin-bottom: 10px; font-weight: bold; font-size: 1.2rem;">Game Over!</p>
+                    <button id="btn-reset-game">Back to Lobby</button>
+                </div>
+            </div>
+
+            <!-- PLAYER SCREENS -->
+            <div id="player-voting" style="display: none; margin-top: 20px;">
+                <p style="margin-bottom: 10px;">Who do you vote to eliminate?</p>
+                <div id="vote-buttons-container" style="display: flex; flex-direction: column; gap: 8px;"></div>
+            </div>
+
+            <div id="player-dead" style="display: none; margin-top: 20px;">
+                <h1 style="color: #fc8181; font-size: 2.5rem; letter-spacing: 2px;">YOU ARE DEAD</h1>
+                <p style="margin-top: 10px; color: #a0aec0;">Wait for the game to finish.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="client.js"></script>
+</body>
+</html>

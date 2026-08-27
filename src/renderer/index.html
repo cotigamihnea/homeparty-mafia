@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- Content Security Policy to allow local scripts and connections -->
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:*;">
+    <title>Mafia Game Host</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="host-container">
+        <!-- Header: Instructions on how to join -->
+        <header class="top-bar">
+            <h1>🕵️ MAFIA</h1>
+            <div class="join-instructions">
+                <span>Grab your phone and go to:</span>
+                <div id="join-address" class="address-box">Starting server...</div>
+            </div>
+        </header>
+
+        <!-- Main Area: Shows game phases, timers, and connected players -->
+        <main>
+            <div class="lobby-info">
+                <!-- Dynamic Phase Announcement -->
+                <h2 id="phase-banner">Lobby <span id="player-count">(0)</span></h2>
+                <p id="phase-description">Waiting for players to join...</p>
+                
+                <!-- Big Timer (Hidden by default) -->
+                <div id="timer-display" style="display: none;">90</div>
+            </div>
+            
+            <div id="players-grid" class="players-grid">
+                <!-- Player cards will be injected here by JavaScript -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Point to the compiled JS in the dist folder -->
+    <script>require('../../dist/renderer/renderer.js')</script>
+</body>
+</html>
