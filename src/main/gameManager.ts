@@ -1,6 +1,6 @@
 export type Role = 'Storyteller' | 'Player';
-export type SubRole = 'Doctor' | 'Policeman' | 'Killer' | 'Townie' | 'None';
-export type GamePhase = 'LOBBY' | 'NIGHT' | 'DAY_REPORT' | 'DAY_TALK' | 'VOTING' | 'DAY_ELIMINATION' | 'END_GAME'; 
+export type GamePhase = 'LOBBY' | 'NIGHT' | 'DAY_REPORT_JESTER' | 'JESTER_HAUNT_REVEAL' | 'DAY_REPORT' | 'DAY_REVEAL_KILL' | 'DAY_TALK' | 'VOTING' | 'EXECUTION_REVEAL' | 'DAY_ELIMINATION' | 'END_GAME'; 
+export type SubRole = 'Doctor' | 'Policeman' | 'Killer' | 'Townie' | 'Escort' | 'Jester' | 'None';
 export type WinnerReason = 'normal' | 'storyteller_left' | 'killer_left' | null;
 
 export interface User {
@@ -16,7 +16,16 @@ export class GameManager {
     public phase: GamePhase = 'LOBBY';
     public votes: Map<string, string> = new Map();
     public winner: 'Killer' | 'Town' | null = null; 
-    public winnerReason: WinnerReason = null; // Track WHY they won
+    public winnerReason: WinnerReason = null; 
+
+    // Tracker variables
+    public jesterVoters: string[] = [];
+    public pendingJesterAction: boolean = false;
+    public activeJesterId: string | null = null;
+    public recentHauntVictim: string | null = null;
+    public recentNightVictim: string | null = null;
+    public recentExecutionVictim: string | null = null;
+    public executionIsJester: boolean = false;
 
     public addUser(id: string, username: string): User {
         // If there is no Storyteller, make them the Storyteller
@@ -31,7 +40,7 @@ export class GameManager {
     public removeUser(id: string): User | undefined {
         const user = this.users.get(id);
         this.users.delete(id);
-        return user; // Return the user so we can check their role/status
+        return user;
     }
 
     public getAllUsers(): User[] {
@@ -66,20 +75,35 @@ export class GameManager {
         }
     }
 
-    public assignRoles(): void {
+    public assignRoles(customConfig?: { killers: number, doctors: number, cops: number, escorts: number, jesters: number } | null): void {
         const players = this.getAllUsers().filter(u => u.role === 'Player');
-        
-        for (let i = players.length - 1; i > 0; i--) {
+        const numPlayers = players.length;
+        const rolePool: SubRole[] = [];
+
+        if (customConfig) {
+            for (let i = 0; i < customConfig.killers; i++) rolePool.push('Killer');
+            for (let i = 0; i < customConfig.doctors; i++) rolePool.push('Doctor');
+            for (let i = 0; i < customConfig.cops; i++) rolePool.push('Policeman');
+            for (let i = 0; i < customConfig.escorts; i++) rolePool.push('Escort');
+            for (let i = 0; i < customConfig.jesters; i++) rolePool.push('Jester'); 
+            
+            if (rolePool.length > numPlayers) rolePool.length = numPlayers; 
+        } else {
+            if (numPlayers >= 8) rolePool.push('Killer', 'Killer');
+            else rolePool.push('Killer');
+            rolePool.push('Doctor');
+            if (numPlayers >= 6) rolePool.push('Policeman');
+        }
+
+        while (rolePool.length < numPlayers) rolePool.push('Townie');
+
+        for (let i = rolePool.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [players[i], players[j]] = [players[j], players[i]];
+            [rolePool[i], rolePool[j]] = [rolePool[j], rolePool[i]];
         }
 
         players.forEach((player, index) => {
-            if (index === 0) player.subRole = 'Killer';
-            else if (index === 1) player.subRole = 'Doctor';
-            else if (index === 2) player.subRole = 'Policeman';
-            else player.subRole = 'Townie';
-            
+            player.subRole = rolePool[index];
             player.isAlive = true;
             this.users.set(player.id, player);
         });
@@ -100,7 +124,7 @@ export class GameManager {
         return this.votes.size === this.getAlivePlayers().length;
     }
 
-    public resolveVotes(): void {
+    public resolveVotes(): { id: string, isJester: boolean } {
         const voteCounts: Record<string, number> = {};
         for (const target of this.votes.values()) {
             voteCounts[target] = (voteCounts[target] || 0) + 1;
@@ -120,11 +144,28 @@ export class GameManager {
             }
         }
 
+        let isJester = false;
         if (!isTie && eliminatedId && eliminatedId !== 'no_one') {
+            const eliminatedUser = this.users.get(eliminatedId);
+            if (eliminatedUser && eliminatedUser.subRole === 'Jester') {
+                isJester = true;
+                this.activeJesterId = eliminatedId;
+                this.pendingJesterAction = true;
+                
+                const voters: string[] = [];
+                for (const [voterId, target] of this.votes.entries()) {
+                    if (target === eliminatedId) {
+                        const v = this.users.get(voterId);
+                        if (v) voters.push(v.username);
+                    }
+                }
+                this.jesterVoters = voters;
+            }
             this.killPlayer(eliminatedId);
         }
-
         this.votes.clear();
+
+        return { id: (isTie || !eliminatedId) ? 'no_one' : eliminatedId, isJester };
     }
 
     public forceEndGame(winner: 'Killer' | 'Town', reason: WinnerReason): void {
@@ -135,16 +176,17 @@ export class GameManager {
 
     public checkWinCondition(): boolean {
         const alivePlayers = this.getAlivePlayers();
-        const killerAlive = alivePlayers.some(p => p.subRole === 'Killer');
+        const killersAlive = alivePlayers.filter(p => p.subRole === 'Killer').length;
+        const nonKillersAlive = alivePlayers.length - killersAlive;
 
-        if (!killerAlive) {
+        if (killersAlive === 0) {
             this.winner = 'Town';
             this.winnerReason = 'normal';
             this.phase = 'END_GAME';
             return true;
         }
 
-        if (alivePlayers.length <= 2 && killerAlive) {
+        if (killersAlive >= nonKillersAlive) {
             this.winner = 'Killer';
             this.winnerReason = 'normal';
             this.phase = 'END_GAME';
@@ -158,6 +200,13 @@ export class GameManager {
         this.phase = 'LOBBY';
         this.winner = null;
         this.winnerReason = null;
+        this.jesterVoters = [];
+        this.pendingJesterAction = false;
+        this.activeJesterId = null;
+        this.recentHauntVictim = null;
+        this.recentNightVictim = null;
+        this.recentExecutionVictim = null;
+        this.executionIsJester = false;
         this.votes.clear();
         for (const user of this.users.values()) {
             if (user.role === 'Player') {

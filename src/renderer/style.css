@@ -9,15 +9,15 @@ body {
     background-color: #0b0d14;
     color: white;
     height: 100vh;
-    overflow: hidden; /* Prevent scrolling on the main TV screen */
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     transition: background-color 1.5s ease-in-out;
 }
 
-/* Night Phase Transition */
+
 body.night-mode {
-    background-color: #050608; /* Pitch black for night */
+    background-color: #050608;
 }
 
 body.night-mode .top-bar {
@@ -91,7 +91,6 @@ main {
     margin-top: 10px;
 }
 
-/* Big Timer */
 #timer-display {
     font-size: 5rem;
     font-weight: bold;
@@ -124,14 +123,14 @@ main {
     background: linear-gradient(145deg, #252a3d 0%, #3a3219 100%);
 }
 
-/* Dead Player State */
+
 .player-card.dead {
     opacity: 0.4;
     filter: grayscale(100%);
     background: #1a1d29;
     border-color: #e53e3e;
     transform: scale(0.95);
-    animation: none; /* Remove pop-in so it doesn't replay */
+    animation: none;
 }
 
 .player-card.dead .player-name {
@@ -140,7 +139,7 @@ main {
 }
 
 .player-card.dead .player-role {
-    color: #e53e3e; /* Highlight their revealed role in red */
+    color: #e53e3e;
     font-weight: bold;
 }
 

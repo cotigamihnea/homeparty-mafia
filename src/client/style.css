@@ -18,7 +18,7 @@ body {
 
 .container {
     width: 100%;
-    max-width: 420px; /* Looks great on desktop, scales down on mobile */
+    max-width: 420px;
 }
 
 .card {
@@ -28,7 +28,7 @@ body {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     text-align: center;
     border: 1px solid #2d3246;
-    display: none; /* Controlled by JS */
+    display: none;
 }
 
 .card.active {
@@ -90,7 +90,6 @@ button:active {
     background-color: #c53030;
 }
 
-/* Role Display */
 .role-badge {
     background: #252a3d;
     padding: 20px;

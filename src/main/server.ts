@@ -12,10 +12,8 @@ export function startServer() {
 
     setupSockets(io);
 
-    // Serve the mobile UI to anyone who types the IP into their phone
     app.use(express.static(path.join(__dirname, '../../src/client')));
 
-    // Start on port 0 (random port)
     return new Promise((resolve) => {
         const server = httpServer.listen(0, () => {
             const address = server.address();

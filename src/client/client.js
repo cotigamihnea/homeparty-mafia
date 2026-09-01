@@ -1,6 +1,5 @@
 const socket = io();
 
-// UI Elements
 const joinScreen = document.getElementById('join-screen');
 const gameScreen = document.getElementById('game-screen');
 const joinForm = document.getElementById('join-form');
@@ -8,8 +7,6 @@ const usernameInput = document.getElementById('username-input');
 const joinError = document.getElementById('join-error');
 const welcomeMsg = document.getElementById('welcome-msg');
 const roleName = document.getElementById('role-name');
-
-// Storyteller Elements
 const stControls = document.getElementById('storyteller-controls');
 const btnStartGame = document.getElementById('btn-start-game');
 const btnShowTransfer = document.getElementById('btn-show-transfer');
@@ -27,18 +24,28 @@ const btnSkipTalk = document.getElementById('btn-skip-talk');
 const timerDisplay = document.getElementById('time-left');
 const stEnd = document.getElementById('st-end-controls');
 const btnResetGame = document.getElementById('btn-reset-game');
-
-// Player Elements
+const stModeSelection = document.getElementById('st-mode-selection');
+const modeSelect = document.getElementById('game-mode-select');
+const customConfig = document.getElementById('custom-roles-config');
+const customKillers = document.getElementById('custom-killers');
+const customDoctors = document.getElementById('custom-doctors');
+const customCops = document.getElementById('custom-cops');
+const customError = document.getElementById('custom-error');
+const customEscorts = document.getElementById('custom-escorts');
 const playerVoting = document.getElementById('player-voting');
 const voteContainer = document.getElementById('vote-buttons-container');
 const playerDead = document.getElementById('player-dead');
+const customJesters = document.getElementById('custom-jesters');
+const stJesterDeath = document.getElementById('st-jester-death-controls');
+const jesterDeathContainer = document.getElementById('jester-death-buttons-container');
+const playerJesterWin = document.getElementById('player-jester-win');
+const jesterVotersList = document.getElementById('jester-voters-list');
 
 let myRole = 'Player';
 let timerInterval;
 let isTransferring = false; 
-let currentState = null; // Store the state locally
+let currentState = null; 
 
-// Handle Form Submission
 joinForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const username = usernameInput.value.trim();
@@ -63,11 +70,51 @@ socket.on('roleAssigned', (role) => {
 
 // MAIN GAME LOOP
 socket.on('gameStateUpdate', (state) => {
-    currentState = state; // Save state
-    renderGame();         // Draw screen
+    currentState = state; 
+    renderGame();         
 });
 
-// Draw the screen based on currentState
+function validateStartConfig() {
+    if (!currentState || myRole !== 'Storyteller') return;
+    const playersCount = currentState.alivePlayers.length;
+    
+    if (playersCount < 4) {
+        btnStartGame.disabled = true;
+        btnStartGame.innerText = `Start Game (${playersCount}/4)`;
+        customError.style.display = 'none';
+        return;
+    }
+
+    if (modeSelect.value === 'custom') {
+        const k = parseInt(customKillers.value) || 0;
+        const d = parseInt(customDoctors.value) || 0;
+        const c = parseInt(customCops.value) || 0;
+        const e = parseInt(customEscorts.value) || 0; // Grab Escort value
+        const j = parseInt(customJesters.value) || 0; // Grab Jester value
+        const totalCustom = k + d + c + e + j;
+
+        if (totalCustom > playersCount) {
+            btnStartGame.disabled = true;
+            btnStartGame.innerText = 'Start Game';
+            customError.innerText = `Too many roles (${totalCustom}/${playersCount})`;
+            customError.style.display = 'block';
+        } else if (k < 1) {
+            btnStartGame.disabled = true;
+            btnStartGame.innerText = 'Start Game';
+            customError.innerText = `Need at least 1 Killer`;
+            customError.style.display = 'block';
+        } else {
+            btnStartGame.disabled = false;
+            btnStartGame.innerText = 'Start Game';
+            customError.style.display = 'none';
+        }
+    } else {
+        btnStartGame.disabled = false;
+        btnStartGame.innerText = 'Start Game';
+        customError.style.display = 'none';
+    }
+}
+
 function renderGame() {
     if (!currentState) return;
     const state = currentState;
@@ -83,7 +130,6 @@ function renderGame() {
             playerDead.style.display = 'none';
         } else {
             stControls.style.display = 'none';
-            // FIX 2: Reset text properly if you get demoted to Player
             if (myData.subRole !== 'None') {
                 roleName.innerText = myData.subRole;
                 roleName.style.color = '#63b3ed';
@@ -93,11 +139,19 @@ function renderGame() {
             }
 
             if (!myData.isAlive) {
-                playerDead.style.display = 'block';
+                if (myData.subRole === 'Jester' && state.activeJesterId === myData.id) {
+                    playerJesterWin.style.display = 'block';
+                    jesterVotersList.innerText = state.jesterVoters.length > 0 ? state.jesterVoters.join(', ') : 'No one (Tiebreaker?)';
+                    playerDead.style.display = 'none';
+                } else {
+                    playerDead.style.display = 'block';
+                    playerJesterWin.style.display = 'none';
+                }
                 playerVoting.style.display = 'none';
                 return; 
             } else {
                 playerDead.style.display = 'none';
+                playerJesterWin.style.display = 'none';
             }
         }
     }
@@ -111,8 +165,9 @@ function renderGame() {
     stTalk.style.display = 'none';
     stEnd.style.display = 'none';
     playerVoting.style.display = 'none';
+    stModeSelection.style.display = 'none';
+    stJesterDeath.style.display = 'none';
 
-    // FIX 3: Manage Notes Visibility & Wiping
     if (myRole === 'Storyteller' && state.phase !== 'LOBBY') {
         stNotesContainer.style.display = 'block';
     } else {
@@ -120,10 +175,11 @@ function renderGame() {
     }
 
     if (state.phase === 'LOBBY') {
-        stNotes.value = ''; // Erase notes for the next game!
+        stNotes.value = ''; 
         
         if (myRole === 'Storyteller') {
             if (isTransferring) {
+                stModeSelection.style.display = 'none';
                 stTransfer.style.display = 'block';
                 transferContainer.innerHTML = '';
                 const eligible = state.users.filter(u => u.role === 'Player');
@@ -137,11 +193,9 @@ function renderGame() {
                     transferContainer.appendChild(btn);
                 });
             } else {
+                stModeSelection.style.display = 'block';
                 btnStartGame.style.display = 'block';
-                btnStartGame.disabled = state.alivePlayers.length < 6;
-                btnStartGame.innerText = state.alivePlayers.length < 6 
-                    ? `Start Game (${state.alivePlayers.length}/6)` 
-                    : 'Start Game';
+                validateStartConfig(); 
                 
                 if (state.users.length > 1) btnShowTransfer.style.display = 'block';
             }
@@ -154,7 +208,6 @@ function renderGame() {
         stDeath.style.display = 'block';
         deathContainer.innerHTML = '';
         
-        // Exclude the Killer from the death choices
         const validTargets = state.alivePlayers.filter(p => p.subRole !== 'Killer');
         const buttons = [...validTargets, { id: 'no_one', username: 'No one' }];
         
@@ -185,6 +238,17 @@ function renderGame() {
             voteContainer.appendChild(btn);
         });
     }
+    else if (state.phase === 'DAY_REPORT_JESTER' && myRole === 'Storyteller') {
+        stJesterDeath.style.display = 'block';
+        jesterDeathContainer.innerHTML = '';
+        
+        state.alivePlayers.forEach(p => {
+            const btn = document.createElement('button');
+            btn.innerText = p.username;
+            btn.onclick = () => socket.emit('reportJesterDeath', p.id);
+            jesterDeathContainer.appendChild(btn);
+        });
+    }
     else if (state.phase === 'END_GAME' && myRole === 'Storyteller') {
         stEnd.style.display = 'block';
     }
@@ -202,10 +266,35 @@ socket.on('startTimer', (durationMs) => {
     }, 1000);
 });
 
-// Clicks (Force local redraw for transfer toggles)
+// Event listeners for UI
+modeSelect.addEventListener('change', () => {
+    customConfig.style.display = modeSelect.value === 'custom' ? 'flex' : 'none';
+    validateStartConfig();
+});
+
+customKillers.addEventListener('input', validateStartConfig);
+customDoctors.addEventListener('input', validateStartConfig);
+customCops.addEventListener('input', validateStartConfig);
+customEscorts.addEventListener('input', validateStartConfig);
+customJesters.addEventListener('input', validateStartConfig);
+
 btnShowTransfer.onclick = () => { isTransferring = true; renderGame(); };
 btnCancelTransfer.onclick = () => { isTransferring = false; renderGame(); };
-btnStartGame.onclick = () => socket.emit('startGame');
 btnStartDay.onclick = () => socket.emit('startDay');
 btnSkipTalk.onclick = () => socket.emit('skipToVote');
 btnResetGame.onclick = () => socket.emit('resetGame');
+
+btnStartGame.onclick = () => {
+    if (modeSelect.value === 'custom') {
+        const config = {
+            killers: parseInt(customKillers.value) || 0,
+            doctors: parseInt(customDoctors.value) || 0,
+            cops: parseInt(customCops.value) || 0,
+            escorts: parseInt(customEscorts.value) || 0,
+            jesters: parseInt(customJesters.value) || 0
+        };
+        socket.emit('startGame', config);
+    } else {
+        socket.emit('startGame', null);
+    }
+};

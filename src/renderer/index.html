@@ -9,16 +9,19 @@
 </head>
 <body>
     <div class="host-container">
-        <!-- Header: Instructions on how to join -->
+        <!-- Header -->
         <header class="top-bar">
             <h1>🕵️ MAFIA</h1>
             <div class="join-instructions">
                 <span>Grab your phone and go to:</span>
                 <div id="join-address" class="address-box">Starting server...</div>
+                <!-- Add this canvas right above the address -->
+                <canvas id="qr-canvas" style="margin: 0 auto 15px auto; display: block;"></canvas>
+                <div id="join-address" style="text-align: center; font-size: 2rem; color: #63b3ed;"></div>
             </div>
         </header>
 
-        <!-- Main Area: Shows game phases, timers, and connected players -->
+        <!-- Main Area -->
         <main>
             <div class="lobby-info">
                 <!-- Dynamic Phase Announcement -->

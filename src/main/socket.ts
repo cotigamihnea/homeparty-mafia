@@ -4,7 +4,7 @@ import { GameManager } from './gameManager';
 export function setupSockets(io: Server) {
     const game = new GameManager();
     let serverTimer: NodeJS.Timeout | null = null;
-    let resetTimer: NodeJS.Timeout | null = null; // Handles the 15-second endgame wait
+    let resetTimer: NodeJS.Timeout | null = null;
 
     const stopServerTimer = () => {
         if (serverTimer) clearTimeout(serverTimer);
@@ -17,12 +17,17 @@ export function setupSockets(io: Server) {
             users: users,
             alivePlayers: game.getAlivePlayers(),
             winner: game.winner,
-            winnerReason: game.winnerReason // Send reason to TV!
+            winnerReason: game.winnerReason,
+            jesterVoters: game.jesterVoters,
+            activeJesterId: game.activeJesterId,
+            recentHauntVictim: game.recentHauntVictim,
+            recentNightVictim: game.recentNightVictim,
+            recentExecutionVictim: game.recentExecutionVictim,
+            executionIsJester: game.executionIsJester
         });
         io.emit('playerListUpdated', users);
     };
 
-    // Central function to handle end-game logic and timers
     const triggerEndGame = (winner?: 'Killer' | 'Town', reason?: 'storyteller_left' | 'killer_left') => {
         stopServerTimer(); 
         
@@ -34,7 +39,7 @@ export function setupSockets(io: Server) {
         // Start 15s auto-reset timer
         if (resetTimer) clearTimeout(resetTimer);
         resetTimer = setTimeout(() => {
-            game.assignRandomStoryteller(); // Guarantees a Storyteller exists
+            game.assignRandomStoryteller();
             game.resetToLobby();
             broadcastGameState();
         }, 15000);
@@ -42,17 +47,28 @@ export function setupSockets(io: Server) {
 
     const resolveVotingPhase = () => {
         stopServerTimer();
-        game.resolveVotes(); 
+        const result = game.resolveVotes(); 
         
-        if (game.checkWinCondition()) return triggerEndGame();
+        const targetUser = game.getAllUsers().find(u => u.id === result.id);
+        game.recentExecutionVictim = targetUser ? targetUser.username : 'no_one';
+        game.executionIsJester = result.isJester;
 
-        game.phase = 'DAY_ELIMINATION';
+        game.phase = 'EXECUTION_REVEAL';
         broadcastGameState();
 
-        serverTimer = setTimeout(() => {
-            game.phase = 'NIGHT';
+        const delay = (result.isJester || result.id === 'no_one') ? 5000 : 10000;
+
+        setTimeout(() => {
+            if (game.checkWinCondition()) return triggerEndGame();
+
+            game.phase = 'DAY_ELIMINATION';
             broadcastGameState();
-        }, 5000);
+
+            serverTimer = setTimeout(() => {
+                game.phase = 'NIGHT';
+                broadcastGameState();
+            }, 5000);
+        }, delay);
     };
 
     const startVotingPhase = () => {
@@ -80,30 +96,60 @@ export function setupSockets(io: Server) {
             broadcastGameState();
         });
 
-        socket.on('startGame', () => {
-            if (game.getAlivePlayers().length >= 6) {
-                game.assignRoles();
+        socket.on('startGame', (customConfig?: { killers: number, doctors: number, cops: number, escorts: number, jesters: number } | null) => {
+            if (game.getAlivePlayers().length >= 4) { 
+                game.assignRoles(customConfig);
                 broadcastGameState();
             }
         });
 
         socket.on('startDay', () => {
-            game.phase = 'DAY_REPORT';
+            if (game.pendingJesterAction) {
+                game.phase = 'DAY_REPORT_JESTER';
+            } else {
+                game.phase = 'DAY_REPORT';
+            }
             broadcastGameState();
         });
 
-        socket.on('reportDeath', (targetId: string) => {
-            game.killPlayer(targetId);
-            if (game.checkWinCondition()) return triggerEndGame();
-
-            game.phase = 'DAY_TALK';
-            broadcastGameState();
-            io.emit('startTimer', 90000); 
+        socket.on('reportJesterDeath', (targetId: string) => {
+            const targetUser = game.getAllUsers().find(u => u.id === targetId);
+            game.recentHauntVictim = targetUser ? targetUser.username : null;
             
-            stopServerTimer();
-            serverTimer = setTimeout(() => {
-                if (game.phase === 'DAY_TALK') startVotingPhase();
-            }, 90000);
+            game.killPlayer(targetId);
+            game.pendingJesterAction = false;
+            
+            game.phase = 'JESTER_HAUNT_REVEAL';
+            broadcastGameState();
+
+            setTimeout(() => {
+                if (game.checkWinCondition()) return triggerEndGame();
+                game.phase = 'DAY_REPORT'; 
+                broadcastGameState();
+            }, 5000);
+        });
+
+        socket.on('reportDeath', (targetId: string) => {
+            const targetUser = game.getAllUsers().find(u => u.id === targetId);
+            game.recentNightVictim = targetUser ? targetUser.username : 'no_one';
+            
+            game.killPlayer(targetId);
+
+            game.phase = 'DAY_REVEAL_KILL';
+            broadcastGameState();
+            
+            setTimeout(() => {
+                if (game.checkWinCondition()) return triggerEndGame();
+
+                game.phase = 'DAY_TALK';
+                broadcastGameState();
+                io.emit('startTimer', 90000); 
+                
+                stopServerTimer();
+                serverTimer = setTimeout(() => {
+                    if (game.phase === 'DAY_TALK') startVotingPhase();
+                }, 90000);
+            }, 5000);
         });
 
         socket.on('skipToVote', () => {
@@ -117,7 +163,6 @@ export function setupSockets(io: Server) {
         });
 
         socket.on('resetGame', () => {
-            // Storyteller manually triggered reset early!
             if (resetTimer) clearTimeout(resetTimer);
             stopServerTimer();
             game.resetToLobby();
@@ -126,10 +171,9 @@ export function setupSockets(io: Server) {
 
         socket.on('requestStateUpdate', () => broadcastGameState());
 
-        // Handling Disconnects Intelligently
         socket.on('disconnect', () => {
             const user = game.removeUser(socket.id);
-            if (!user) return; // Player was never fully joined
+            if (!user) return;
 
             if (game.phase === 'LOBBY') {
                 if (user.role === 'Storyteller') game.assignRandomStoryteller();
@@ -137,21 +181,25 @@ export function setupSockets(io: Server) {
                 return;
             }
 
-            // If game is actively running:
             if (user.role === 'Storyteller') {
                 triggerEndGame('Killer', 'storyteller_left');
             } 
             else if (user.role === 'Player' && user.isAlive) {
                 if (user.subRole === 'Killer') {
-                    triggerEndGame('Town', 'killer_left');
+                    const killersStillAlive = game.getAlivePlayers().some(p => p.subRole === 'Killer');
+                    
+                    if (!killersStillAlive) {
+                        triggerEndGame('Town', 'killer_left');
+                    } else {
+                        if (game.checkWinCondition()) triggerEndGame();
+                        else broadcastGameState();
+                    }
                 } else {
-                    // Check if townies leaving resulted in Killer winning by majority
                     if (game.checkWinCondition()) triggerEndGame();
                     else broadcastGameState();
                 }
             } 
             else {
-                // Dead people leaving affects nothing! Just redraw screen.
                 broadcastGameState();
             }
         });

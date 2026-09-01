@@ -31,7 +31,40 @@
 
             <!-- STORYTELLER CONTROLS -->
             <div id="storyteller-controls" style="display: none; margin-top: 20px;">
-                <button id="btn-start-game" disabled>Start Game (Need 6+ Players)</button>
+                <!-- GAME MODE SELECTION -->
+                <div id="st-mode-selection" style="display: none; margin-top: 15px; margin-bottom: 15px; padding: 12px; background: #2d3748; border-radius: 8px;">
+                    <label style="color: #a0aec0; font-size: 0.9rem; margin-bottom: 5px; display: block;">Game Mode:</label>
+                    <select id="game-mode-select" style="width: 100%; padding: 8px; margin-bottom: 10px; background: #1a202c; color: white; border: 1px solid #4a5568; border-radius: 4px;">
+                        <option value="default">Default (Auto-balanced)</option>
+                        <option value="custom">Custom Roles</option>
+                    </select>
+
+                    <div id="custom-roles-config" style="display: none; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>🔪 Killers:</span>
+                            <input type="number" id="custom-killers" min="1" value="1" style="width: 60px; padding: 4px; background: #1a202c; color: white; border: 1px solid #4a5568; border-radius: 4px; text-align: center;">
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>🩺 Doctors:</span>
+                            <input type="number" id="custom-doctors" min="0" value="1" style="width: 60px; padding: 4px; background: #1a202c; color: white; border: 1px solid #4a5568; border-radius: 4px; text-align: center;">
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>👮 Cops:</span>
+                            <input type="number" id="custom-cops" min="0" value="1" style="width: 60px; padding: 4px; background: #1a202c; color: white; border: 1px solid #4a5568; border-radius: 4px; text-align: center;">
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>💃 Escorts:</span>
+                            <input type="number" id="custom-escorts" min="0" value="0" style="width: 60px; padding: 4px; background: #1a202c; color: white; border: 1px solid #4a5568; border-radius: 4px; text-align: center;">
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>🤡 Jesters:</span>
+                            <input type="number" id="custom-jesters" min="0" value="0" style="width: 60px; padding: 4px; background: #1a202c; color: white; border: 1px solid #4a5568; border-radius: 4px; text-align: center;">
+                        </div>
+                        <p id="custom-error" style="color: #fc8181; font-size: 0.8rem; display: none; margin-top: 5px;">Too many roles for current players!</p>
+                    </div>
+                </div>
+
+                <button id="btn-start-game" disabled>Start Game (Need 4+ Players)</button>
                 
                 <button id="btn-show-transfer" style="margin-top: 10px; background-color: #4a5568;">Promote another Storyteller</button>
                 
@@ -41,7 +74,6 @@
                     <button id="btn-cancel-transfer" style="margin-top: 10px; background-color: #a0aec0; color: #1a1d29;">Cancel</button>
                 </div>
                 
-                <!-- NOTES SECTION -->
                 <div id="st-notes-container" style="display: none; margin-top: 20px; text-align: left;">
                     <label style="color: #a0aec0; font-size: 0.8rem; text-transform: uppercase;">Private Notes</label>
                     <textarea id="st-notes" rows="4" placeholder="Note down who is who..." style="width: 100%; margin-top: 5px; padding: 10px; border-radius: 8px; background: #0b0d14; color: #fff; border: 1px solid #4a5568; resize: vertical;"></textarea>
@@ -52,11 +84,16 @@
                     <button id="btn-start-day" style="margin-top: 10px;">Start the Daytime</button>
                 </div>
 
+                <div id="st-jester-death-controls" style="display: none; margin-top: 15px;">
+                    <p style="margin-bottom: 10px; color: #ecc94b; font-weight: bold;">Who did the Jester haunt?</p>
+                    <div id="jester-death-buttons-container" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                </div>
+
                 <div id="st-death-controls" style="display: none; margin-top: 15px;">
                     <p style="margin-bottom: 10px;">Who died tonight?</p>
                     <div id="death-buttons-container" style="display: flex; flex-direction: column; gap: 8px;"></div>
                 </div>
-
+                
                 <div id="st-talk-controls" style="display: none; margin-top: 15px;">
                     <p style="margin-bottom: 10px;">Talking phase... <span id="time-left">90</span>s</p>
                     <button id="btn-skip-talk">Skip Talking Stage</button>
@@ -68,7 +105,6 @@
                 </div>
             </div>
 
-            <!-- PLAYER SCREENS -->
             <div id="player-voting" style="display: none; margin-top: 20px;">
                 <p style="margin-bottom: 10px;">Who do you vote to eliminate?</p>
                 <div id="vote-buttons-container" style="display: flex; flex-direction: column; gap: 8px;"></div>
@@ -77,6 +113,14 @@
             <div id="player-dead" style="display: none; margin-top: 20px;">
                 <h1 style="color: #fc8181; font-size: 2.5rem; letter-spacing: 2px;">YOU ARE DEAD</h1>
                 <p style="margin-top: 10px; color: #a0aec0;">Wait for the game to finish.</p>
+            </div>
+
+            <div id="player-jester-win" style="display: none; margin-top: 20px;">
+                <h1 style="color: #ecc94b; font-size: 2.5rem; letter-spacing: 2px;">YOU WON!</h1>
+                <p style="margin-top: 10px; font-weight: bold;">You were voted out!</p>
+                <p style="margin-top: 10px; color: #a0aec0;">Your voters:</p>
+                <p id="jester-voters-list" style="color: #fff; font-weight: bold; margin-top: 5px;"></p>
+                <p style="margin-top: 15px; color: #fc8181; font-size: 0.9rem;">Tell the Storyteller who you want to haunt.</p>
             </div>
         </div>
     </div>
