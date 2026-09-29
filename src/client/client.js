@@ -6,7 +6,11 @@ const joinForm = document.getElementById('join-form');
 const usernameInput = document.getElementById('username-input');
 const joinError = document.getElementById('join-error');
 const welcomeMsg = document.getElementById('welcome-msg');
+const phaseChip = document.getElementById('phase-chip');
+const roleBadgeInner = document.getElementById('role-badge-inner');
+const roleAvatarUse = document.getElementById('role-avatar-use');
 const roleName = document.getElementById('role-name');
+const roleDesc = document.getElementById('role-desc');
 const stControls = document.getElementById('storyteller-controls');
 const btnStartGame = document.getElementById('btn-start-game');
 const btnShowTransfer = document.getElementById('btn-show-transfer');
@@ -41,10 +45,85 @@ const jesterDeathContainer = document.getElementById('jester-death-buttons-conta
 const playerJesterWin = document.getElementById('player-jester-win');
 const jesterVotersList = document.getElementById('jester-voters-list');
 
+const ROLE_ICON = {
+    Storyteller: 'icon-storyteller',
+    Killer: 'icon-killer',
+    Doctor: 'icon-doctor',
+    Policeman: 'icon-cop',
+    Escort: 'icon-escort',
+    Jester: 'icon-jester',
+    Townie: 'icon-townie',
+    None: 'icon-secret'
+};
+
+const ROLE_INFO = {
+    Storyteller: 'You run the night, guide the town, and keep every secret straight.',
+    Killer: 'Strike under cover of night. Match the town in numbers to win.',
+    Doctor: 'Each night, pick one person to protect from the killers.',
+    Policeman: 'Each night, investigate one suspect to learn the truth.',
+    Escort: 'Each night, distract one player and block their action.',
+    Jester: 'Get the town to execute you and you win on your own.',
+    Townie: 'No powers, just your wits. Find the killers before it is too late.',
+    None: 'Your role will be revealed once the Storyteller starts the game.'
+};
+
+const PHASE_LABEL = {
+    LOBBY: 'Lobby',
+    NIGHT: 'Night',
+    DAY_REPORT_JESTER: 'Dawn',
+    JESTER_HAUNT_REVEAL: 'Dawn',
+    DAY_REPORT: 'Dawn',
+    DAY_REVEAL_KILL: 'Dawn',
+    DAY_TALK: 'Discussion',
+    VOTING: 'Voting',
+    EXECUTION_REVEAL: 'Verdict',
+    DAY_ELIMINATION: 'Verdict',
+    END_GAME: 'Game over'
+};
+
 let myRole = 'Player';
 let timerInterval;
-let isTransferring = false; 
-let currentState = null; 
+let isTransferring = false;
+let currentState = null;
+let lastBadgeRole = null;
+
+function setRoleBadge(roleKey, label) {
+    roleBadgeInner.dataset.role = roleKey;
+    roleAvatarUse.setAttribute('href', '#' + (ROLE_ICON[roleKey] || 'icon-secret'));
+    roleName.innerText = label;
+    roleDesc.innerText = ROLE_INFO[roleKey] || '';
+
+    if (lastBadgeRole !== null && lastBadgeRole !== roleKey) {
+        roleBadgeInner.classList.remove('flip');
+        void roleBadgeInner.offsetWidth; // restart the animation
+        roleBadgeInner.classList.add('flip');
+    }
+    lastBadgeRole = roleKey;
+}
+
+function createRosterButton(label, iconId, dataRole, index, onClick) {
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'roster-btn';
+    btn.dataset.role = dataRole;
+    btn.style.animationDelay = `${index * 45}ms`;
+
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('class', 'roster-btn-icon');
+    svg.setAttribute('aria-hidden', 'true');
+    const use = document.createElementNS(svgNS, 'use');
+    use.setAttribute('href', '#' + iconId);
+    svg.appendChild(use);
+
+    const name = document.createElement('span');
+    name.className = 'roster-btn-name';
+    name.textContent = label;
+
+    btn.append(svg, name);
+    btn.onclick = onClick;
+    return btn;
+}
 
 joinForm.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -70,14 +149,14 @@ socket.on('roleAssigned', (role) => {
 
 // MAIN GAME LOOP
 socket.on('gameStateUpdate', (state) => {
-    currentState = state; 
-    renderGame();         
+    currentState = state;
+    renderGame();
 });
 
 function validateStartConfig() {
     if (!currentState || myRole !== 'Storyteller') return;
     const playersCount = currentState.alivePlayers.length;
-    
+
     if (playersCount < 4) {
         btnStartGame.disabled = true;
         btnStartGame.innerText = `Start Game (${playersCount}/4)`;
@@ -89,8 +168,8 @@ function validateStartConfig() {
         const k = parseInt(customKillers.value) || 0;
         const d = parseInt(customDoctors.value) || 0;
         const c = parseInt(customCops.value) || 0;
-        const e = parseInt(customEscorts.value) || 0; // Grab Escort value
-        const j = parseInt(customJesters.value) || 0; // Grab Jester value
+        const e = parseInt(customEscorts.value) || 0;
+        const j = parseInt(customJesters.value) || 0;
         const totalCustom = k + d + c + e + j;
 
         if (totalCustom > playersCount) {
@@ -119,36 +198,45 @@ function renderGame() {
     if (!currentState) return;
     const state = currentState;
 
+    phaseChip.textContent = PHASE_LABEL[state.phase] || '';
+    phaseChip.dataset.phase = state.phase;
+    document.body.classList.toggle('night-mode', state.phase === 'NIGHT');
+
     const myData = state.users.find(u => u.id === socket.id);
+    gameScreen.classList.toggle('is-dead', !!myData && myData.role === 'Player' && !myData.isAlive);
     if (myData) {
         myRole = myData.role;
-        
+
         if (myRole === 'Storyteller') {
-            roleName.innerText = 'Storyteller';
-            roleName.style.color = '#ecc94b';
+            setRoleBadge('Storyteller', 'Storyteller');
             stControls.style.display = 'block';
             playerDead.style.display = 'none';
         } else {
             stControls.style.display = 'none';
             if (myData.subRole !== 'None') {
-                roleName.innerText = myData.subRole;
-                roleName.style.color = '#63b3ed';
+                setRoleBadge(myData.subRole, myData.subRole);
             } else {
-                roleName.innerText = 'Waiting...';
-                roleName.style.color = '#a0aec0';
+                setRoleBadge('None', 'Waiting...');
             }
 
             if (!myData.isAlive) {
                 if (myData.subRole === 'Jester' && state.activeJesterId === myData.id) {
                     playerJesterWin.style.display = 'block';
-                    jesterVotersList.innerText = state.jesterVoters.length > 0 ? state.jesterVoters.join(', ') : 'No one (Tiebreaker?)';
+                    jesterVotersList.innerHTML = '';
+                    const voters = state.jesterVoters.length > 0 ? state.jesterVoters : ['No one (Tiebreaker?)'];
+                    voters.forEach(v => {
+                        const chip = document.createElement('span');
+                        chip.className = 'chip';
+                        chip.textContent = v;
+                        jesterVotersList.appendChild(chip);
+                    });
                     playerDead.style.display = 'none';
                 } else {
                     playerDead.style.display = 'block';
                     playerJesterWin.style.display = 'none';
                 }
                 playerVoting.style.display = 'none';
-                return; 
+                return;
             } else {
                 playerDead.style.display = 'none';
                 playerJesterWin.style.display = 'none';
@@ -175,48 +263,43 @@ function renderGame() {
     }
 
     if (state.phase === 'LOBBY') {
-        stNotes.value = ''; 
-        
+        stNotes.value = '';
+
         if (myRole === 'Storyteller') {
             if (isTransferring) {
                 stModeSelection.style.display = 'none';
                 stTransfer.style.display = 'block';
                 transferContainer.innerHTML = '';
                 const eligible = state.users.filter(u => u.role === 'Player');
-                eligible.forEach(p => {
-                    const btn = document.createElement('button');
-                    btn.innerText = p.username;
-                    btn.onclick = () => {
+                eligible.forEach((p, i) => {
+                    transferContainer.appendChild(createRosterButton(p.username, 'icon-secret', 'None', i, () => {
                         socket.emit('transferStoryteller', p.id);
                         isTransferring = false;
-                    };
-                    transferContainer.appendChild(btn);
+                    }));
                 });
             } else {
                 stModeSelection.style.display = 'block';
                 btnStartGame.style.display = 'block';
-                validateStartConfig(); 
-                
+                validateStartConfig();
+
                 if (state.users.length > 1) btnShowTransfer.style.display = 'block';
             }
         }
-    } 
+    }
     else if (state.phase === 'NIGHT' && myRole === 'Storyteller') {
         stNight.style.display = 'block';
     }
     else if (state.phase === 'DAY_REPORT' && myRole === 'Storyteller') {
         stDeath.style.display = 'block';
         deathContainer.innerHTML = '';
-        
+
         const validTargets = state.alivePlayers.filter(p => p.subRole !== 'Killer');
-        const buttons = [...validTargets, { id: 'no_one', username: 'No one' }];
-        
-        buttons.forEach(p => {
-            const btn = document.createElement('button');
-            btn.innerText = p.username;
-            btn.onclick = () => socket.emit('reportDeath', p.id);
-            deathContainer.appendChild(btn);
+        validTargets.forEach((p, i) => {
+            deathContainer.appendChild(createRosterButton(p.username, ROLE_ICON[p.subRole] || 'icon-secret', p.subRole, i,
+                () => socket.emit('reportDeath', p.id)));
         });
+        deathContainer.appendChild(createRosterButton('No one', 'icon-none', 'none-option', validTargets.length,
+            () => socket.emit('reportDeath', 'no_one')));
     }
     else if (state.phase === 'DAY_TALK' && myRole === 'Storyteller') {
         stTalk.style.display = 'block';
@@ -224,29 +307,26 @@ function renderGame() {
     else if (state.phase === 'VOTING' && myRole === 'Player' && myData?.isAlive) {
         playerVoting.style.display = 'block';
         voteContainer.innerHTML = '';
-        
+
+        const castVote = (targetId) => {
+            socket.emit('submitVote', targetId);
+            voteContainer.innerHTML = '<p class="vote-confirm">Vote cast. Waiting for the others&hellip;</p>';
+        };
+
         const otherPlayers = state.alivePlayers.filter(p => p.id !== socket.id);
-        const buttons = [...otherPlayers, { id: 'no_one', username: 'Vote No One' }];
-        
-        buttons.forEach(p => {
-            const btn = document.createElement('button');
-            btn.innerText = p.username;
-            btn.onclick = () => {
-                socket.emit('submitVote', p.id);
-                voteContainer.innerHTML = '<p style="color: #48bb78; margin-top: 10px;">Vote cast! Waiting for others...</p>';
-            };
-            voteContainer.appendChild(btn);
+        otherPlayers.forEach((p, i) => {
+            voteContainer.appendChild(createRosterButton(p.username, 'icon-secret', 'None', i, () => castVote(p.id)));
         });
+        voteContainer.appendChild(createRosterButton('Vote No One', 'icon-none', 'none-option', otherPlayers.length,
+            () => castVote('no_one')));
     }
     else if (state.phase === 'DAY_REPORT_JESTER' && myRole === 'Storyteller') {
         stJesterDeath.style.display = 'block';
         jesterDeathContainer.innerHTML = '';
-        
-        state.alivePlayers.forEach(p => {
-            const btn = document.createElement('button');
-            btn.innerText = p.username;
-            btn.onclick = () => socket.emit('reportJesterDeath', p.id);
-            jesterDeathContainer.appendChild(btn);
+
+        state.alivePlayers.forEach((p, i) => {
+            jesterDeathContainer.appendChild(createRosterButton(p.username, ROLE_ICON[p.subRole] || 'icon-secret', p.subRole, i,
+                () => socket.emit('reportJesterDeath', p.id)));
         });
     }
     else if (state.phase === 'END_GAME' && myRole === 'Storyteller') {
@@ -258,7 +338,8 @@ function renderGame() {
 socket.on('startTimer', (durationMs) => {
     clearInterval(timerInterval);
     let secondsLeft = Math.ceil(durationMs / 1000);
-    
+    if (timerDisplay) timerDisplay.innerText = secondsLeft;
+
     timerInterval = setInterval(() => {
         secondsLeft--;
         if (timerDisplay) timerDisplay.innerText = secondsLeft;

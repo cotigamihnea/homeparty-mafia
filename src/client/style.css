@@ -1,123 +1,758 @@
+/* ==========================================================================
+   MAFIA — Mobile Controller
+   Same noir case-file language as the TV screen, tuned for one-thumb use.
+   Fonts are self-hosted so phones with no internet (LAN-only) still render
+   them correctly.
+   ========================================================================== */
+
+@font-face {
+    font-family: 'Cinzel';
+    src: url('assets/fonts/Cinzel-Variable.woff2') format('woff2');
+    font-weight: 400 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Manrope';
+    src: url('assets/fonts/Manrope-Variable.woff2') format('woff2');
+    font-weight: 200 800;
+    font-style: normal;
+    font-display: swap;
+}
+
+:root {
+    --bg-base: #0a0b10;
+    --bg-panel: #161822;
+    --bg-panel-raised: #1e2130;
+    --bg-input: #0e0f16;
+    --border-subtle: #2b2f42;
+    --border-strong: #3c4260;
+
+    --ink-primary: #f1efe6;
+    --ink-secondary: #9aa1ba;
+    --ink-muted: #5b6178;
+
+    --accent-crimson: #d6483f;
+    --accent-crimson-soft: rgba(214, 72, 63, 0.3);
+    --accent-gold: #dcb054;
+    --accent-gold-soft: rgba(220, 176, 84, 0.28);
+    --accent-emerald: #4fb87a;
+    --accent-emerald-soft: rgba(79, 184, 122, 0.28);
+
+    --figure-ink: #aab2c8;
+
+    --font-display: 'Cinzel', Georgia, 'Times New Roman', serif;
+    --font-ui: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+    --radius-lg: 20px;
+    --radius-md: 13px;
+    --radius-sm: 9px;
+}
+
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     -webkit-tap-highlight-color: transparent;
 }
 
+html, body {
+    min-height: 100%;
+}
+
 body {
-    background-color: #0f111a;
-    color: #ffffff;
-    min-height: 100vh;
+    background: var(--bg-base);
+    color: var(--ink-primary);
+    font-family: var(--font-ui);
+    min-height: 100dvh;
     display: flex;
     justify-content: center;
-    align-items: center;
-    padding: 16px;
+    align-items: flex-start;
+    padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
+    position: relative;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+        radial-gradient(ellipse 90% 40% at 50% -5%, rgba(214, 72, 63, 0.12), transparent 55%),
+        radial-gradient(ellipse 80% 50% at 50% 105%, rgba(0, 0, 0, 0.5), transparent 60%);
+}
+
+body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.03;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 .container {
     width: 100%;
-    max-width: 420px;
+    max-width: 440px;
+    position: relative;
+    z-index: 1;
+    margin: auto;
 }
 
 .card {
-    background: #1a1d29;
-    padding: 32px 24px;
-    border-radius: 16px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    background: linear-gradient(175deg, var(--bg-panel-raised) 0%, var(--bg-panel) 100%);
+    padding: 30px 22px 26px;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
     text-align: center;
-    border: 1px solid #2d3246;
+    border: 1px solid var(--border-subtle);
     display: none;
 }
 
 .card.active {
     display: block;
-    animation: fadeIn 0.3s ease-in-out;
+    animation: cardIn 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes cardIn {
+    from { opacity: 0; transform: translateY(14px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ---------------------------------- Brand ---------------------------------- */
+
+.brand-mark {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.brand-mask {
+    width: 30px;
+    height: 30px;
+    color: var(--accent-crimson);
+    filter: drop-shadow(0 0 8px var(--accent-crimson-soft));
 }
 
 .game-title {
-    font-size: 2.2rem;
-    letter-spacing: 2px;
-    color: #e53e3e;
-    margin-bottom: 8px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 2rem;
+    letter-spacing: 0.24em;
+    color: var(--ink-primary);
+    text-shadow: 0 0 22px var(--accent-crimson-soft);
 }
 
 .subtitle {
-    color: #a0aec0;
+    color: var(--ink-secondary);
     font-size: 0.95rem;
-    margin-bottom: 24px;
+    margin-bottom: 26px;
 }
+
+/* ---------------------------------- Game header + phase chip ---------------------------------- */
+
+.game-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    text-align: left;
+}
+
+.game-header .section-title {
+    margin-bottom: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.phase-chip {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 11px;
+    border-radius: 6px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-secondary);
+}
+
+.phase-chip::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--chip-color, var(--ink-muted));
+}
+
+.phase-chip[data-phase="NIGHT"] { --chip-color: #7d93d6; }
+.phase-chip[data-phase="DAY_TALK"] { --chip-color: var(--accent-gold); }
+.phase-chip[data-phase="VOTING"],
+.phase-chip[data-phase="EXECUTION_REVEAL"],
+.phase-chip[data-phase="DAY_REVEAL_KILL"] { --chip-color: var(--accent-crimson); }
+.phase-chip[data-phase="VOTING"]::before { animation: pulseDot 1s ease-in-out infinite; }
+.phase-chip[data-phase="LOBBY"] { --chip-color: var(--accent-emerald); }
+
+/* Night: the whole controller dims, like a room with the lights off */
+body.night-mode::before {
+    background:
+        radial-gradient(ellipse 80% 40% at 50% -5%, rgba(99, 125, 200, 0.12), transparent 55%),
+        radial-gradient(ellipse 120% 90% at 50% 50%, transparent 30%, rgba(0, 0, 0, 0.6) 100%);
+}
+
+body.night-mode .card {
+    border-color: #20243a;
+}
+
+/* ---------------------------------- Forms & inputs ---------------------------------- */
 
 form {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 14px;
 }
 
-input {
+input[type="text"],
+input[type="number"],
+.select-input,
+.notes-input {
     width: 100%;
     padding: 14px 16px;
-    font-size: 1.1rem;
-    background: #0f111a;
-    border: 2px solid #2d3246;
-    border-radius: 10px;
-    color: #ffffff;
+    font-family: var(--font-ui);
+    font-size: 1.05rem;
+    background: var(--bg-input);
+    border: 2px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--ink-primary);
     outline: none;
-    transition: border-color 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input[type="text"] {
     text-align: center;
 }
 
-input:focus {
-    border-color: #e53e3e;
+input:focus-visible,
+.select-input:focus-visible,
+.notes-input:focus-visible,
+button:focus-visible {
+    border-color: var(--accent-crimson);
+    box-shadow: 0 0 0 3px var(--accent-crimson-soft);
+}
+
+.select-input {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9'%3E%3Cpath d='M1 1l6 6 6-6' stroke='%239aa1ba' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    padding-right: 40px;
+    text-align: left;
 }
 
 button {
     width: 100%;
-    padding: 14px 16px;
-    font-size: 1.1rem;
-    font-weight: 600;
-    background-color: #e53e3e;
-    color: white;
+    padding: 15px 16px;
+    font-family: var(--font-ui);
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
     border: none;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: background-color 0.2s, transform 0.1s;
+    transition: transform 0.12s ease, background-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 }
 
 button:active {
-    transform: scale(0.98);
-    background-color: #c53030;
+    transform: scale(0.97);
 }
 
+.btn-primary {
+    background: linear-gradient(160deg, #e15850 0%, var(--accent-crimson) 100%);
+    color: #fff5f3;
+    box-shadow: 0 10px 24px var(--accent-crimson-soft);
+}
+
+.btn-primary:disabled {
+    background: var(--border-subtle);
+    color: var(--ink-muted);
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+.btn-secondary {
+    background: var(--bg-panel-raised);
+    color: var(--ink-primary);
+    border: 1px solid var(--border-strong);
+}
+
+.btn-ghost {
+    background: transparent;
+    color: var(--ink-secondary);
+    border: 1px solid var(--border-subtle);
+}
+
+.form-error {
+    color: var(--accent-crimson);
+    font-size: 0.88rem;
+    margin-top: 4px;
+    display: none;
+}
+
+/* ---------------------------------- Role badge ---------------------------------- */
+
 .role-badge {
-    background: #252a3d;
-    padding: 20px;
-    border-radius: 12px;
-    margin: 20px 0;
-    border: 1px dashed #4a5568;
+    background: var(--bg-panel);
+    padding: 22px 18px;
+    border-radius: var(--radius-md);
+    margin: 22px 0;
+    border: 1px dashed var(--border-strong);
+    perspective: 800px;
+}
+
+.role-badge-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.role-badge-inner.flip {
+    animation: roleFlip 0.75s cubic-bezier(0.2, 0.8, 0.25, 1);
+}
+
+@keyframes roleFlip {
+    0% { transform: rotateY(-90deg) scale(0.92); opacity: 0; }
+    60% { opacity: 1; }
+    100% { transform: rotateY(0deg) scale(1); opacity: 1; }
+}
+
+.role-badge-inner.flip .role-avatar {
+    animation: avatarGlow 1.6s ease-out 0.4s;
+}
+
+@keyframes avatarGlow {
+    0% { filter: drop-shadow(0 0 0 transparent); }
+    40% { filter: drop-shadow(0 0 16px var(--role-color)); }
+    100% { filter: drop-shadow(0 0 0 transparent); }
+}
+
+.role-avatar {
+    width: 58px;
+    height: 58px;
+    color: var(--figure-ink);
+    margin-bottom: 2px;
 }
 
 .role-label {
     text-transform: uppercase;
-    font-size: 0.8rem;
-    letter-spacing: 1px;
-    color: #a0aec0;
+    font-size: 0.76rem;
+    letter-spacing: 0.18em;
+    color: var(--ink-muted);
 }
 
 #role-name {
-    font-size: 1.8rem;
-    margin-top: 6px;
-    color: #ecc94b;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.7rem;
+    letter-spacing: 0.02em;
+    color: var(--role-color, var(--accent-gold));
+    transition: color 0.4s ease;
 }
 
 .role-desc {
-    color: #cbd5e0;
-    font-size: 0.95rem;
+    color: var(--ink-secondary);
+    font-size: 0.9rem;
     line-height: 1.5;
+    margin-top: 6px;
+    max-width: 32ch;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(8px); }
+/* ---------------------------------- Control sections ---------------------------------- */
+
+.st-controls {
+    display: none;
+    margin-top: 18px;
+}
+
+.control-block {
+    display: none;
+    margin-top: 16px;
+    text-align: left;
+}
+
+#st-mode-selection {
+    margin: 0 0 14px;
+}
+
+#btn-show-transfer,
+#btn-cancel-transfer {
+    margin-top: 10px;
+}
+
+.control-block-inline {
+    padding: 14px;
+    background: var(--bg-panel);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
+}
+
+.control-label {
+    display: block;
+    color: var(--ink-muted);
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.control-copy {
+    color: var(--ink-secondary);
+    font-size: 0.95rem;
+    margin-bottom: 10px;
+}
+
+.control-copy.accent-gold {
+    color: var(--accent-gold);
+    font-weight: 700;
+}
+
+.section-title {
+    font-weight: 700;
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+    color: var(--ink-primary);
+}
+
+.custom-roles {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.role-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.98rem;
+}
+
+.role-row-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ink-secondary);
+}
+
+.role-row-icon {
+    width: 30px;
+    height: 30px;
+    color: var(--figure-ink);
+}
+
+input.role-input {
+    width: 72px;
+    flex-shrink: 0;
+    padding: 8px 4px;
+    text-align: center;
+    background: var(--bg-input);
+    color: var(--ink-primary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+}
+
+.notes-input {
+    resize: vertical;
+    min-height: 90px;
+    font-size: 0.95rem;
+}
+
+.notes-block { margin-top: 20px; text-align: left; }
+
+/* ---------------------------------- Roster lists (dynamic buttons) ---------------------------------- */
+
+.roster-list {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    margin-top: 4px;
+}
+
+.roster-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-left: 4px solid var(--role-color, var(--border-strong));
+    border-radius: var(--radius-sm);
+    color: var(--ink-primary);
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: left;
+    animation: rosterIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    transition: transform 0.12s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+@keyframes rosterIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.roster-btn:active {
+    background: var(--bg-panel-raised);
+    border-color: var(--role-color, var(--border-strong));
+}
+
+.roster-btn-icon {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    color: var(--figure-ink);
+}
+
+.roster-btn-name {
+    flex-grow: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vote-confirm {
+    color: var(--accent-emerald);
+    margin-top: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.vote-confirm::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent-emerald);
+    box-shadow: 0 0 8px var(--accent-emerald-soft);
+    animation: pulseDot 1.4s ease-in-out infinite;
+}
+
+@keyframes pulseDot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+/* ---------------------------------- Timer ---------------------------------- */
+
+.talk-timer {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    font-variant-numeric: tabular-nums;
+}
+
+#time-left {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--accent-gold);
+}
+
+/* ---------------------------------- End states ---------------------------------- */
+
+.state-block {
+    display: none;
+    margin-top: 22px;
+    padding: 10px 0 4px;
+}
+
+.state-icon {
+    width: 74px;
+    height: 74px;
+    margin: 0 auto 14px;
+}
+
+.state-title {
+    font-family: var(--font-display);
+    font-size: 2.1rem;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+}
+
+.state-title--dead {
+    color: var(--accent-crimson);
+    text-shadow: 0 0 26px var(--accent-crimson-soft);
+}
+
+.state-title--win {
+    color: var(--accent-gold);
+    text-shadow: 0 0 26px var(--accent-gold-soft);
+}
+
+.state-copy {
+    margin-top: 10px;
+    color: var(--ink-secondary);
+    font-size: 0.95rem;
+}
+
+.state-hint {
+    margin-top: 16px;
+    color: var(--accent-crimson);
+    font-size: 0.88rem;
+}
+
+.voters-chips {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.voters-chips .chip {
+    background: var(--bg-panel);
+    border: 1px solid var(--accent-gold-soft);
+    color: var(--accent-gold);
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+#player-dead .state-icon {
+    color: var(--ink-muted);
+    animation: sinkIn 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes sinkIn {
+    from { opacity: 0; transform: translateY(-14px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+/* Once you're out, your role card fades like an old photograph */
+#game-screen.is-dead .role-badge {
+    opacity: 0.55;
+    filter: grayscale(70%);
+    transition: opacity 0.8s ease, filter 0.8s ease;
+}
+
+#player-jester-win {
+    position: relative;
+}
+
+#player-jester-win .state-title--win {
+    animation: goldPulse 2.2s ease-in-out infinite;
+}
+
+@keyframes goldPulse {
+    0%, 100% { text-shadow: 0 0 14px var(--accent-gold-soft); }
+    50% { text-shadow: 0 0 34px rgba(220, 176, 84, 0.6); }
+}
+
+/* Confetti-like burst of gold sparks behind the title */
+.win-burst {
+    position: relative;
+    height: 0;
+    top: 22px;
+}
+
+.win-burst span {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 7px;
+    height: 7px;
+    background: var(--accent-gold);
+    border-radius: 2px;
+    opacity: 0;
+    animation: spark 2.4s ease-out infinite;
+}
+
+.win-burst span:nth-child(1) { --dx: -120px; --dy: -40px; animation-delay: 0s; }
+.win-burst span:nth-child(2) { --dx: 120px;  --dy: -46px; animation-delay: 0.3s; background: #9b7fd4; }
+.win-burst span:nth-child(3) { --dx: -80px;  --dy: -80px; animation-delay: 0.6s; }
+.win-burst span:nth-child(4) { --dx: 86px;   --dy: -84px; animation-delay: 0.9s; background: #f1efe6; }
+.win-burst span:nth-child(5) { --dx: -150px; --dy: 10px;  animation-delay: 1.2s; background: #9b7fd4; }
+.win-burst span:nth-child(6) { --dx: 150px;  --dy: 6px;   animation-delay: 1.5s; }
+.win-burst span:nth-child(7) { --dx: -30px;  --dy: -96px; animation-delay: 1.8s; background: #f1efe6; }
+.win-burst span:nth-child(8) { --dx: 34px;   --dy: -100px; animation-delay: 2.1s; }
+
+@keyframes spark {
+    0% { opacity: 0; transform: translate(-50%, 0) scale(0.4) rotate(0deg); }
+    15% { opacity: 1; }
+    100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), var(--dy)) scale(1) rotate(200deg); }
+}
+
+/* ---------------------------------- Shared SVG glyph theme (matches TV) ---------------------------------- */
+
+.role-badge-ring {
+    fill: var(--bg-panel);
+    stroke: var(--role-color, var(--ink-muted));
+    stroke-width: 2.5;
+}
+
+.role-glyph {
+    fill: var(--role-color, var(--ink-muted));
+}
+
+.role-glyph-outline {
+    fill: none;
+    stroke: var(--role-color, var(--ink-muted));
+    stroke-width: 2.2;
+    stroke-linejoin: round;
+}
+
+.role-glyph-stroke {
+    stroke: var(--role-color, var(--ink-muted));
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+
+.role-glyph-stroke.thick {
+    stroke-width: 2.8;
+}
+
+.role-badge-bg-fill {
+    fill: var(--bg-panel);
+}
+
+.role-glyph-text {
+    fill: var(--role-color, var(--ink-muted));
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+[data-role="Killer"] { --role-color: #d6483f; }
+[data-role="Doctor"] { --role-color: #4bb3a4; }
+[data-role="Policeman"] { --role-color: #6c95d1; }
+[data-role="Escort"] { --role-color: #c97aa8; }
+[data-role="Jester"] { --role-color: #9b7fd4; }
+[data-role="Townie"] { --role-color: #c9a05c; }
+[data-role="Storyteller"] { --role-color: #dcb054; }
+[data-role="None"] { --role-color: #6b7290; }
+[data-role="dead"] { --role-color: #8a5f5f; }
+[data-role="none-option"] { --role-color: #545a72; }
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+    }
 }

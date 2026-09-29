@@ -1,9 +1,17 @@
-node_modules/
-npm-debug.log*
-dist/
-release/
-out/
-build/
+# Whitelist: ignore everything at the repo root, then allow only
+# the source code, the README and the JSON config files.
+/*
+!/.gitignore
+!/src/
+!/README.md
+!/*.json
+
+# Claude Code tooling, anywhere in the tree
+skills-lock.json
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+
+# OS junk, even inside src/
 .DS_Store
 Thumbs.db
-*.zip
