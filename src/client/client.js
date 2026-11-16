@@ -44,6 +44,16 @@ const stJesterDeath = document.getElementById('st-jester-death-controls');
 const jesterDeathContainer = document.getElementById('jester-death-buttons-container');
 const playerJesterWin = document.getElementById('player-jester-win');
 const jesterVotersList = document.getElementById('jester-voters-list');
+const statusScreen = document.getElementById('status-screen');
+const statusTitle = document.getElementById('status-title');
+const statusCopy = document.getElementById('status-copy');
+const btnStatusAction = document.getElementById('btn-status-action');
+const connectionBanner = document.getElementById('connection-banner');
+const stTerminate = document.getElementById('st-terminate-controls');
+const btnTerminate = document.getElementById('btn-terminate');
+const terminateConfirm = document.getElementById('terminate-confirm');
+const btnTerminateCancel = document.getElementById('btn-terminate-cancel');
+const btnTerminateConfirm = document.getElementById('btn-terminate-confirm');
 
 const ROLE_ICON = {
     Storyteller: 'icon-storyteller',
@@ -86,6 +96,109 @@ let timerInterval;
 let isTransferring = false;
 let currentState = null;
 let lastBadgeRole = null;
+let isConfirmingTerminate = false;
+
+// ---------------------------------------------------------------- Session
+// The server keeps a seat for 60s after a phone drops. The phone remembers its
+// seat token so it can quietly take that seat back when it reconnects (page
+// refresh, browser closed and reopened, Wi-Fi blip, screen lock...).
+
+const SESSION_KEY = 'mafia.session';
+let myPlayerId = null;
+let seatReplaced = false;
+
+function readSession() {
+    try { return JSON.parse(localStorage.getItem(SESSION_KEY)) || null; } catch { return null; }
+}
+
+function writeSession(session) {
+    try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch { /* storage blocked */ }
+}
+
+function forgetToken() {
+    const session = readSession();
+    writeSession({ token: null, name: session ? session.name : null });
+}
+
+function showScreen(screen) {
+    [joinScreen, statusScreen, gameScreen].forEach(s => s.classList.toggle('active', s === screen));
+}
+
+function showStatus(title, copy, actionLabel) {
+    statusTitle.textContent = title;
+    statusCopy.textContent = copy;
+    btnStatusAction.hidden = !actionLabel;
+    if (actionLabel) btnStatusAction.textContent = actionLabel;
+    showScreen(statusScreen);
+}
+
+function showJoin(error, name) {
+    myPlayerId = null;
+    if (name && !usernameInput.value) usernameInput.value = name;
+    joinError.innerText = error || '';
+    joinError.style.display = error ? 'block' : 'none';
+    showScreen(joinScreen);
+}
+
+function enterGame(response, name) {
+    myPlayerId = response.playerId;
+    writeSession({ token: response.token, name });
+    joinError.style.display = 'none';
+    if (!gameScreen.classList.contains('active')) showScreen(gameScreen);
+    renderGame();
+}
+
+function joinByName(name) {
+    socket.emit('joinGame', name, (response) => {
+        if (response && response.success) enterGame(response, name);
+        else showJoin(response ? response.error : 'Could not join.', name);
+    });
+}
+
+function reclaimSeat() {
+    const session = readSession();
+    if (!session || !session.token) return;
+
+    // Only show the "rejoining" card when we're not already on the game screen,
+    // so a quick Wi-Fi blip doesn't make the whole UI flash.
+    if (!myPlayerId) showStatus('Rejoining your seat…', "Hang on, we're getting you back into the game.");
+
+    socket.emit('resumeSession', session.token, (response) => {
+        if (response && response.success) return enterGame(response, session.name);
+
+        // The seat is gone (grace period ran out, or the host app restarted).
+        // Try joining again under the same name; the server will refuse if the
+        // game is already running and we land back on the join screen.
+        forgetToken();
+        if (session.name) joinByName(session.name);
+        else showJoin('Your seat expired. Join again.');
+    });
+}
+
+socket.on('connect', () => {
+    connectionBanner.hidden = true;
+    if (!seatReplaced) reclaimSeat();
+});
+
+socket.on('disconnect', () => {
+    if (seatReplaced) return;
+    if (myPlayerId) connectionBanner.hidden = false;
+});
+
+// This seat was opened somewhere else (another tab or another phone)
+socket.on('sessionReplaced', () => {
+    seatReplaced = true;
+    myPlayerId = null;
+    connectionBanner.hidden = true;
+    showStatus('Playing somewhere else', 'Your seat was opened in another tab or on another device.', 'Play on this device');
+});
+
+btnStatusAction.onclick = () => {
+    seatReplaced = false;
+    showStatus('Rejoining your seat…', "Hang on, we're getting you back into the game.");
+    if (socket.connected) reclaimSeat();
+    else socket.connect();
+};
 
 function setRoleBadge(roleKey, label) {
     roleBadgeInner.dataset.role = roleKey;
@@ -101,7 +214,7 @@ function setRoleBadge(roleKey, label) {
     lastBadgeRole = roleKey;
 }
 
-function createRosterButton(label, iconId, dataRole, index, onClick) {
+function createRosterButton(label, iconId, dataRole, index, onClick, away = false) {
     const svgNS = 'http://www.w3.org/2000/svg';
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -121,6 +234,13 @@ function createRosterButton(label, iconId, dataRole, index, onClick) {
     name.textContent = label;
 
     btn.append(svg, name);
+    if (away) {
+        btn.classList.add('is-away');
+        const tag = document.createElement('span');
+        tag.className = 'roster-btn-tag';
+        tag.textContent = 'Reconnecting';
+        btn.appendChild(tag);
+    }
     btn.onclick = onClick;
     return btn;
 }
@@ -128,23 +248,7 @@ function createRosterButton(label, iconId, dataRole, index, onClick) {
 joinForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const username = usernameInput.value.trim();
-    if (username) {
-        socket.emit('joinGame', username, (response) => {
-            if (response.error) {
-                joinError.innerText = response.error;
-                joinError.style.display = 'block';
-            } else {
-                joinError.style.display = 'none';
-                joinScreen.classList.remove('active');
-                gameScreen.classList.add('active');
-                welcomeMsg.innerText = `Hello, ${username}!`;
-            }
-        });
-    }
-});
-
-socket.on('roleAssigned', (role) => {
-    myRole = role;
+    if (username) joinByName(username);
 });
 
 // MAIN GAME LOOP
@@ -202,10 +306,11 @@ function renderGame() {
     phaseChip.dataset.phase = state.phase;
     document.body.classList.toggle('night-mode', state.phase === 'NIGHT');
 
-    const myData = state.users.find(u => u.id === socket.id);
+    const myData = state.users.find(u => u.id === myPlayerId);
     gameScreen.classList.toggle('is-dead', !!myData && myData.role === 'Player' && !myData.isAlive);
     if (myData) {
         myRole = myData.role;
+        welcomeMsg.innerText = `Hello, ${myData.username}!`;
 
         if (myRole === 'Storyteller') {
             setRoleBadge('Storyteller', 'Storyteller');
@@ -256,6 +361,12 @@ function renderGame() {
     stModeSelection.style.display = 'none';
     stJesterDeath.style.display = 'none';
 
+    const canTerminate = myRole === 'Storyteller' && state.phase !== 'LOBBY' && state.phase !== 'END_GAME';
+    if (!canTerminate) isConfirmingTerminate = false;
+    stTerminate.style.display = canTerminate ? 'block' : 'none';
+    btnTerminate.style.display = isConfirmingTerminate ? 'none' : 'block';
+    terminateConfirm.style.display = isConfirmingTerminate ? 'block' : 'none';
+
     if (myRole === 'Storyteller' && state.phase !== 'LOBBY') {
         stNotesContainer.style.display = 'block';
     } else {
@@ -275,7 +386,7 @@ function renderGame() {
                     transferContainer.appendChild(createRosterButton(p.username, 'icon-secret', 'None', i, () => {
                         socket.emit('transferStoryteller', p.id);
                         isTransferring = false;
-                    }));
+                    }, !p.connected));
                 });
             } else {
                 stModeSelection.style.display = 'block';
@@ -296,7 +407,7 @@ function renderGame() {
         const validTargets = state.alivePlayers.filter(p => p.subRole !== 'Killer');
         validTargets.forEach((p, i) => {
             deathContainer.appendChild(createRosterButton(p.username, ROLE_ICON[p.subRole] || 'icon-secret', p.subRole, i,
-                () => socket.emit('reportDeath', p.id)));
+                () => socket.emit('reportDeath', p.id), !p.connected));
         });
         deathContainer.appendChild(createRosterButton('No one', 'icon-none', 'none-option', validTargets.length,
             () => socket.emit('reportDeath', 'no_one')));
@@ -308,12 +419,17 @@ function renderGame() {
         playerVoting.style.display = 'block';
         voteContainer.innerHTML = '';
 
+        if ((state.votedIds || []).includes(myPlayerId)) {
+            voteContainer.innerHTML = '<p class="vote-confirm">Vote cast. Waiting for the others&hellip;</p>';
+            return;
+        }
+
         const castVote = (targetId) => {
             socket.emit('submitVote', targetId);
             voteContainer.innerHTML = '<p class="vote-confirm">Vote cast. Waiting for the others&hellip;</p>';
         };
 
-        const otherPlayers = state.alivePlayers.filter(p => p.id !== socket.id);
+        const otherPlayers = state.alivePlayers.filter(p => p.id !== myPlayerId);
         otherPlayers.forEach((p, i) => {
             voteContainer.appendChild(createRosterButton(p.username, 'icon-secret', 'None', i, () => castVote(p.id)));
         });
@@ -326,7 +442,7 @@ function renderGame() {
 
         state.alivePlayers.forEach((p, i) => {
             jesterDeathContainer.appendChild(createRosterButton(p.username, ROLE_ICON[p.subRole] || 'icon-secret', p.subRole, i,
-                () => socket.emit('reportJesterDeath', p.id)));
+                () => socket.emit('reportJesterDeath', p.id), !p.connected));
         });
     }
     else if (state.phase === 'END_GAME' && myRole === 'Storyteller') {
@@ -364,6 +480,13 @@ btnCancelTransfer.onclick = () => { isTransferring = false; renderGame(); };
 btnStartDay.onclick = () => socket.emit('startDay');
 btnSkipTalk.onclick = () => socket.emit('skipToVote');
 btnResetGame.onclick = () => socket.emit('resetGame');
+
+btnTerminate.onclick = () => { isConfirmingTerminate = true; renderGame(); };
+btnTerminateCancel.onclick = () => { isConfirmingTerminate = false; renderGame(); };
+btnTerminateConfirm.onclick = () => {
+    isConfirmingTerminate = false;
+    socket.emit('terminateGame');
+};
 
 btnStartGame.onclick = () => {
     if (modeSelect.value === 'custom') {

@@ -749,6 +749,96 @@ input.role-input {
 [data-role="dead"] { --role-color: #8a5f5f; }
 [data-role="none-option"] { --role-color: #545a72; }
 
+/* ---------------------------------- Reconnect ---------------------------------- */
+
+.connection-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+    background: var(--accent-gold);
+    color: #1a1407;
+    font-weight: 700;
+    font-size: 0.92rem;
+    text-align: center;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+    animation: bannerDrop 0.3s ease-out;
+}
+
+.connection-banner[hidden] { display: none; }
+
+@keyframes bannerDrop {
+    from { transform: translateY(-100%); }
+    to { transform: translateY(0); }
+}
+
+.status-title {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--ink-primary);
+    margin-top: 6px;
+}
+
+#status-screen .subtitle { margin-bottom: 0; }
+#btn-status-action { margin-top: 22px; }
+
+.roster-btn.is-away {
+    opacity: 0.6;
+    border-style: dashed;
+    border-left-style: solid;
+}
+
+.roster-btn-tag {
+    flex-shrink: 0;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-gold);
+}
+
+/* ---------------------------------- Terminate ---------------------------------- */
+
+.terminate-block {
+    margin-top: 28px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.btn-danger-ghost {
+    background: transparent;
+    color: var(--accent-crimson);
+    border: 1px solid var(--accent-crimson-soft);
+    font-size: 0.95rem;
+    padding: 12px 16px;
+}
+
+.terminate-confirm {
+    display: none;
+    padding: 16px;
+    border: 1px solid var(--accent-crimson);
+    border-radius: var(--radius-md);
+    background: rgba(214, 72, 63, 0.08);
+    animation: cardIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.terminate-question {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--accent-crimson);
+    margin-bottom: 4px;
+}
+
+.confirm-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+}
+
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
         animation-duration: 0.001ms !important;

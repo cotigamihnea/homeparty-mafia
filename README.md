@@ -8,8 +8,8 @@ A standalone, local-network multiplayer party game. One computer acts as the cen
 * **Mobile Web Clients:** Players do not need to download an app. They simply join by typing the host's IP address into their phone's native web browser (or scanning the TV's QR code).
 * **Two Game Modes:** Play with the **Default** auto-balanced mode, or let the Storyteller use **Custom Mode** to manually set the exact number of Killers, Doctors, Cops, Escorts, and Jesters.
 * **Automated Networking:** The server automatically scans your network, ignores virtual machines, and binds to your true local Wi-Fi IP address so players can connect instantly.
-* **Smart Disconnect Handling:** The game tracks active connections. If the active Storyteller or the sole Killer disconnects, the game intelligently halts and resets to the lobby.
-* **Storyteller Toolkit:** The game moderator gets a unique interface with private, non-syncing notes, phase transition controls, and the ability to promote another player to Storyteller.
+* **Reconnect Grace Period:** Closing the browser, refreshing, or losing Wi-Fi doesn't kick you. Every player keeps their seat (and role) for **60 seconds** and is put back automatically when their phone reconnects, or by typing the same name again. The TV shows a "Reconnecting" countdown on their card. Only when the minute runs out is the player removed (and if that was the Storyteller or the last Killer, the game ends).
+* **Storyteller Toolkit:** The game moderator gets a unique interface with private, non-syncing notes, phase transition controls, the ability to promote another player to Storyteller, and a **Terminate Game** button (with an "Are you sure?" confirmation) that ends the game for everyone and reveals all roles.
 * **Dynamic Voting System:** Automated voting cycles that resolve ties, transition to execution reveals, and enforce game logic automatically.
 
 ## 🎭 The Roles

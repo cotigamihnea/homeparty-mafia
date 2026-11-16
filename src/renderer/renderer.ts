@@ -213,7 +213,11 @@ function updateHostUI(state: any) {
             let text: string;
             let color: string;
             let mood: string;
-            if (state.winnerReason === 'storyteller_left') {
+            if (state.winnerReason === 'terminated') {
+                text = "THE STORYTELLER ENDED THE GAME";
+                color = "var(--accent-gold)";
+                mood = 'gold';
+            } else if (state.winnerReason === 'storyteller_left') {
                 text = "KILLER WON DUE TO STORYTELLER LEAVING";
                 color = "var(--accent-crimson)";
                 mood = 'danger';
@@ -269,6 +273,7 @@ function renderRoster(state: any, phaseJustChanged: boolean) {
         let className = 'player-card';
         if (player.role === 'Storyteller') className += ' storyteller';
         if (!player.isAlive) className += ' dead';
+        if (!player.connected) className += ' is-away';
 
         if (revealRoles) {
             className += ' is-revealed';
@@ -312,12 +317,31 @@ function renderRoster(state: any, phaseJustChanged: boolean) {
         `;
         (card.querySelector('.player-role') as HTMLElement).textContent = roleLabel;
         (card.querySelector('.player-name') as HTMLElement).textContent = player.username;
+
+        if (!player.connected && player.reconnectDeadline) {
+            const away = document.createElement('div');
+            away.className = 'player-away';
+            away.dataset.deadline = String(player.reconnectDeadline);
+            card.appendChild(away);
+        }
         playersGrid.appendChild(card);
     });
+    updateAwayCountdowns();
 
     knownPlayerIds.clear();
     state.users.forEach((player: any) => knownPlayerIds.add(player.id));
 }
+
+// "Reconnecting 0:42" under a player whose phone dropped. The server and this
+// window run on the same machine, so the deadline can be compared to Date.now().
+function updateAwayCountdowns() {
+    playersGrid.querySelectorAll<HTMLElement>('.player-away').forEach((el) => {
+        const msLeft = Math.max(0, Number(el.dataset.deadline) - Date.now());
+        const secs = Math.ceil(msLeft / 1000);
+        el.textContent = `Reconnecting ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+    });
+}
+setInterval(updateAwayCountdowns, 1000);
 
 function startVisualTimer(durationMs: number) {
     clearInterval(screenTimerInterval);

@@ -1,7 +1,7 @@
 export type Role = 'Storyteller' | 'Player';
 export type GamePhase = 'LOBBY' | 'NIGHT' | 'DAY_REPORT_JESTER' | 'JESTER_HAUNT_REVEAL' | 'DAY_REPORT' | 'DAY_REVEAL_KILL' | 'DAY_TALK' | 'VOTING' | 'EXECUTION_REVEAL' | 'DAY_ELIMINATION' | 'END_GAME'; 
 export type SubRole = 'Doctor' | 'Policeman' | 'Killer' | 'Townie' | 'Escort' | 'Jester' | 'None';
-export type WinnerReason = 'normal' | 'storyteller_left' | 'killer_left' | null;
+export type WinnerReason = 'normal' | 'storyteller_left' | 'killer_left' | 'terminated' | null;
 
 export interface User {
     id: string;
@@ -9,6 +9,9 @@ export interface User {
     role: Role;
     subRole: SubRole;
     isAlive: boolean;
+    // A dropped phone keeps its seat until reconnectDeadline (epoch ms).
+    connected: boolean;
+    reconnectDeadline: number | null;
 }
 
 export class GameManager {
@@ -32,7 +35,7 @@ export class GameManager {
         const hasStoryteller = this.getAllUsers().some(u => u.role === 'Storyteller');
         const role: Role = !hasStoryteller ? 'Storyteller' : 'Player';
         
-        const newUser: User = { id, username, role, subRole: 'None', isAlive: true };
+        const newUser: User = { id, username, role, subRole: 'None', isAlive: true, connected: true, reconnectDeadline: null };
         this.users.set(id, newUser);
         return newUser;
     }
@@ -40,7 +43,33 @@ export class GameManager {
     public removeUser(id: string): User | undefined {
         const user = this.users.get(id);
         this.users.delete(id);
+        this.votes.delete(id);
         return user;
+    }
+
+    public getUser(id: string): User | undefined {
+        return this.users.get(id);
+    }
+
+    public markDisconnected(id: string, reconnectDeadline: number): void {
+        const user = this.users.get(id);
+        if (!user) return;
+        user.connected = false;
+        user.reconnectDeadline = reconnectDeadline;
+    }
+
+    public markConnected(id: string): void {
+        const user = this.users.get(id);
+        if (!user) return;
+        user.connected = true;
+        user.reconnectDeadline = null;
+    }
+
+    // A disconnected seat can be reclaimed by typing the same name again
+    // (e.g. the phone lost its saved session or the player switched browsers).
+    public findDisconnectedByName(username: string): User | undefined {
+        const wanted = username.toLowerCase();
+        return this.getAllUsers().find(u => !u.connected && u.username.toLowerCase() === wanted);
     }
 
     public getAllUsers(): User[] {
@@ -121,7 +150,11 @@ export class GameManager {
 
     public castVote(voterId: string, targetId: string): boolean {
         this.votes.set(voterId, targetId);
-        return this.votes.size === this.getAlivePlayers().length;
+        return this.allVoted();
+    }
+
+    public allVoted(): boolean {
+        return this.getAlivePlayers().every(p => this.votes.has(p.id));
     }
 
     public resolveVotes(): { id: string, isJester: boolean } {
@@ -168,7 +201,7 @@ export class GameManager {
         return { id: (isTie || !eliminatedId) ? 'no_one' : eliminatedId, isJester };
     }
 
-    public forceEndGame(winner: 'Killer' | 'Town', reason: WinnerReason): void {
+    public forceEndGame(winner: 'Killer' | 'Town' | null, reason: WinnerReason): void {
         this.winner = winner;
         this.winnerReason = reason;
         this.phase = 'END_GAME';

@@ -104,6 +104,8 @@
         </defs>
     </svg>
 
+    <div id="connection-banner" class="connection-banner" role="status" hidden>Connection lost. Reconnecting&hellip;</div>
+
     <main class="container">
         <!-- SCREEN 1: Join Screen -->
         <section id="join-screen" class="card active">
@@ -118,6 +120,17 @@
                 <p id="join-error" class="form-error" role="alert"></p>
                 <button type="submit" id="join-btn" class="btn-primary">Join Lobby</button>
             </form>
+        </section>
+
+        <!-- SCREEN 1b: Rejoining a saved seat / seat opened on another tab -->
+        <section id="status-screen" class="card">
+            <div class="brand-mark">
+                <svg class="brand-mask" aria-hidden="true"><use href="#icon-brand-mask"/></svg>
+                <h1 class="game-title">MAFIA</h1>
+            </div>
+            <p id="status-title" class="status-title">Rejoining your seat&hellip;</p>
+            <p id="status-copy" class="subtitle">Hang on, we're getting you back into the game.</p>
+            <button id="btn-status-action" class="btn-primary" hidden>Play on this device</button>
         </section>
 
         <!-- SCREEN 2: In-Game / Lobby Screen -->
@@ -209,6 +222,18 @@
                 <div id="st-end-controls" class="control-block">
                     <p class="section-title">Game Over</p>
                     <button id="btn-reset-game" class="btn-primary">Back to Lobby</button>
+                </div>
+
+                <div id="st-terminate-controls" class="control-block terminate-block">
+                    <button id="btn-terminate" class="btn-danger-ghost">Terminate Game</button>
+                    <div id="terminate-confirm" class="terminate-confirm" role="alertdialog" aria-labelledby="terminate-question">
+                        <p id="terminate-question" class="terminate-question">Are you sure?</p>
+                        <p class="control-copy">The game ends for everyone and all roles are revealed.</p>
+                        <div class="confirm-actions">
+                            <button id="btn-terminate-cancel" class="btn-ghost">Cancel</button>
+                            <button id="btn-terminate-confirm" class="btn-primary">Yes, terminate</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 

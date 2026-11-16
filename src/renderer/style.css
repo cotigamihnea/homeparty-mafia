@@ -773,6 +773,32 @@ main {
     color: var(--ink-primary);
 }
 
+/* A player whose phone dropped; their seat is held for a minute */
+.player-card.is-away {
+    border-style: dashed;
+    border-color: var(--accent-gold-soft);
+}
+
+.player-card.is-away .char-avatar {
+    opacity: 0.45;
+}
+
+.player-away {
+    margin-top: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-gold);
+    font-variant-numeric: tabular-nums;
+    animation: awayPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes awayPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+}
+
 /* ---------------------------------- Empty lobby ---------------------------------- */
 
 .roster-empty {
